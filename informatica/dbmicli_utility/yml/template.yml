@@ -1,0 +1,15 @@
+general:
+  name: ${tenant}_lsmv_${job_type}_to_lsdb_stg_rpl
+  description: this is task created from cli
+  location: 'databridge\${tenant}'
+  runtimeEnvironment: databridge-instance  
+
+source:
+  connection: lsdb_${tenant}_postgres
+  schema: ${tenant}_lsmv_${current_environment}
+  replicationSlotName: ls_dbdg_rps_${job_type}_${tenant}
+  publication: ls_dbdg_pub_${job_type}_${tenant}
+  
+target:
+  connection: lsdb_${tenant}_sf_lsdbstg
+  schema: LSDB_RPL

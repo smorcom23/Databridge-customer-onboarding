@@ -1,0 +1,22 @@
+{
+  "objectInfo" : {
+    "id" : "jmBuP4sGOICfjuCB4RqoIH",
+    "name" : "lsdb_perf_testing_round1",
+    "type" : "Folder",
+    "metadata" : {
+      "modelVersion" : {
+        "major" : 0,
+        "minor" : 0
+      },
+      "repoInfo" : null,
+      "contextAttributes" : [ ],
+      "additionalInfo" : {
+        "description" : "",
+        "contentType" : "Binary",
+        "documentState" : "COMPLETE"
+      }
+    }
+  },
+  "dataFileExtension" : "json",
+  "objectRefs" : [ ]
+}

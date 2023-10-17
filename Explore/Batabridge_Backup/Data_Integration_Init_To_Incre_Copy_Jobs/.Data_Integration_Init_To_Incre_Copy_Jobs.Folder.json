@@ -1,0 +1,22 @@
+{
+  "objectInfo" : {
+    "id" : "9btfVdUqIvoezO6jv82ZIG",
+    "name" : "Data_Integration_Init_To_Incre_Copy_Jobs",
+    "type" : "Folder",
+    "metadata" : {
+      "modelVersion" : {
+        "major" : 0,
+        "minor" : 0
+      },
+      "repoInfo" : null,
+      "contextAttributes" : [ ],
+      "additionalInfo" : {
+        "description" : "",
+        "contentType" : "Binary",
+        "documentState" : "COMPLETE"
+      }
+    }
+  },
+  "dataFileExtension" : "json",
+  "objectRefs" : [ ]
+}

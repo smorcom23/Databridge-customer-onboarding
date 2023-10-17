@@ -1,0 +1,22 @@
+{
+  "objectInfo" : {
+    "id" : "106DLihEU0xbkq68gq6yAB",
+    "name" : "Mass_Ingestion_Incremental_Load_Jobs",
+    "type" : "Folder",
+    "metadata" : {
+      "modelVersion" : {
+        "major" : 0,
+        "minor" : 0
+      },
+      "repoInfo" : null,
+      "contextAttributes" : [ ],
+      "additionalInfo" : {
+        "description" : "This folder holds all the CDC jobs to sync the data between LSMV and LSRA Stage",
+        "contentType" : "Binary",
+        "documentState" : "COMPLETE"
+      }
+    }
+  },
+  "dataFileExtension" : "json",
+  "objectRefs" : [ ]
+}

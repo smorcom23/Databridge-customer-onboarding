@@ -1,0 +1,442 @@
+-- alter table $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS add column DERIVED_EXPECT_INTERNATIONAL text;
+
+
+--select * from LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref limit 10
+-- delete from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL  where target_table_name='LS_DB_DRUG_REACT_RELATEDNESS_DER'
+-- call $$TGT_DB_NAME.$$LSDB_TRANSFM.PRC_LS_DB_DRUG_REACT_RELATEDNESS_DER()
+-- USE SCHEMA $$TGT_DB_NAME.$$LSDB_TRANSFM;
+CREATE OR REPLACE PROCEDURE $$TGT_DB_NAME.$$LSDB_TRANSFM.PRC_LS_DB_DRUG_REACT_RELATEDNESS_DER()
+RETURNS VARCHAR NOT NULL
+LANGUAGE SQL
+AS
+$$
+DECLARE
+
+CURRENT_TS_VAR TIMESTAMP;
+
+BEGIN 
+
+CURRENT_TS_VAR := CURRENT_TIMESTAMP();
+
+
+
+/*
+ALTER TABLE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS ADD COLUMN DER_COMBINED_RELATEDNESS TEXT;
+*/
+
+
+
+
+insert into $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG (ROW_WID,TARGET_TABLE_NAME,PARAM_NAME)
+
+select ROW_WID,TARGET_TABLE_NAME,PARAM_NAME from 
+(select (select max( ROW_WID) from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG)+1 ROW_WID,'LS_DB_DRUG_REACT_RELATEDNESS_DER' AS TARGET_TABLE_NAME,'CDC_EXTRACT_TS_LB' PARAM_NAME
+ union all select (select max( ROW_WID) from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG)+2,'LS_DB_DRUG_REACT_RELATEDNESS_DER','CDC_EXTRACT_TS_UB'
+) where TARGET_TABLE_NAME not in (select TARGET_TABLE_NAME from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG)
+;
+
+
+
+INSERT INTO $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL(ROW_WID,FUNCTIONAL_AREA,ENTITY_NAME,TARGET_TABLE_NAME,LOAD_TS,LOAD_START_TS,LOAD_END_TS,
+REC_READ_CNT,REC_PROCESSED_CNT,ERROR_REC_CNT,ERROR_DETAILS,LOAD_STATUS,CHANGED_REC_SET
+)
+SELECT (select nvl(max(row_wid)+1,1) from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL where target_table_name='LS_DB_DRUG_REACT_RELATEDNESS_DER'),
+	'LSRA','Case','LS_DB_DRUG_REACT_RELATEDNESS_DER',null,current_timestamp,null,null,null,null,null,'In Progress',null;
+
+
+UPDATE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG
+SET PARAM_VALUE= nvl((SELECT LOAD_TS from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL 
+						WHERE TARGET_TABLE_NAME='LS_DB_DRUG_REACT_RELATEDNESS_DER' 
+						AND LOAD_STATUS = 'Completed' ORDER BY ROW_WID DESC limit 1),to_timestamp('1900-01-01','YYYY-MM-DD'))
+WHERE TARGET_TABLE_NAME = 'LS_DB_DRUG_REACT_RELATEDNESS_DER'
+AND PARAM_NAME='CDC_EXTRACT_TS_LB'
+--AND 'I' = (SELECT PARAM_NAME FROM $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG WHERE TARGET_TABLE_NAME ='LOAD_CONTROL')
+;
+
+
+UPDATE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG
+SET PARAM_VALUE= (select max(load_ts) from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS)
+WHERE TARGET_TABLE_NAME = 'LS_DB_DRUG_REACT_RELATEDNESS_DER'
+AND PARAM_NAME='CDC_EXTRACT_TS_UB'
+--AND 'I' = (SELECT PARAM_NAME FROM $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG WHERE TARGET_TABLE_NAME ='LOAD_CONTROL')
+;
+
+DROP TABLE IF EXISTS $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC;
+CREATE TEMPORARY TABLE  $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC AS
+select distinct ARI_REC_ID
+FROM 
+	$$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS 
+	
+	where load_ts > (SELECT PARAM_VALUE FROM 
+$$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG WHERE TARGET_TABLE_NAME = 'LS_DB_DRUG_REACT_RELATEDNESS_DER'
+AND PARAM_NAME='CDC_EXTRACT_TS_LB')  and
+
+load_ts <=  (SELECT PARAM_VALUE FROM 
+$$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_ETL_CONFIG WHERE TARGET_TABLE_NAME = 'LS_DB_DRUG_REACT_RELATEDNESS_DER'
+AND PARAM_NAME='CDC_EXTRACT_TS_UB') 
+AND LS_DB_DRUG_REACT_RELATEDNESS.EXPIRY_DATE = TO_DATE('9999-31-12','YYYY-DD-MM')
+;	
+
+
+/*( select UNBLINDED_REC from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_UNBLINDED
+		)*/
+
+
+DROP TABLE IF EXISTS $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_UNBLINDED;
+CREATE TEMPORARY TABLE  $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_UNBLINDED AS
+select LSMV_DRUG.ARI_REC_ID||'-'||AD.SEQ_PRODUCT AS UNBLINDED_REC
+				from 
+				(
+				SELECT LSMV_DRUG.ARI_REC_ID,
+					BLINDED_PRODUCT_REC_ID,
+					row_number() over (partition by RECORD_ID order by CDC_OPERATION_TIME desc) rank
+				FROM $$STG_DB_NAME.$$LSDB_RPL.LSMV_DRUG where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_SAFETY_MASTER_CASE_QFC)
+				AND   CDC_OPERATION_TYPE IN ('I','U') 
+				) LSMV_DRUG 
+				JOIN
+				(
+				SELECT LSMV_DRUG.ARI_REC_ID,
+					LSMV_DRUG.RECORD_ID AS SEQ_PRODUCT,
+					row_number() over (partition by RECORD_ID order by CDC_OPERATION_TIME desc) rank
+				FROM $$STG_DB_NAME.$$LSDB_RPL.LSMV_DRUG where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_SAFETY_MASTER_CASE_QFC)
+				AND   CDC_OPERATION_TYPE IN ('I','U') 
+				) AD
+				ON LSMV_DRUG.ARI_REC_ID              = AD.ARI_REC_ID
+				AND LSMV_DRUG.BLINDED_PRODUCT_REC_ID = AD.SEQ_PRODUCT
+				AND LSMV_DRUG.rank=1 AND AD.rank=1
+
+;
+
+
+
+
+
+UPDATE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS   
+SET LS_DB_DRUG_REACT_RELATEDNESS.DER_COMBINED_RELATEDNESS=LS_DB_DRUG_REACT_RELATEDNESS_TMP.DER_COMBINED_RELATEDNESS
+FROM (
+
+select ARI_REC_ID,RECORD_ID,
+	case
+		when (APAA.REPORTER_CAUSALITY is null
+		and APAA.REPORTER_CAUSALITY_FT is not null )
+		and APAA.COMPANY_CAUSALITY is null 
+	then APAA.REPORTER_CAUSALITY_FT
+		when (APAA.COMPANY_CAUSALITY is null
+		and APAA.COMPANY_CAUSALITY_FT is not null )
+		and APAA.REPORTER_CAUSALITY is null 
+	then APAA.COMPANY_CAUSALITY_FT
+		else case
+			when (
+			select
+				trim(upper(default_value_char))
+			from
+				$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+			where
+				column_name = 'DER_COMBINED_RELATEDNESS'
+				and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS') = 'COMPANY' 
+    then  
+		 (case
+				when APAA.COMPANY_CAUSALITY is null then (
+				select
+					trim((default_value_char))
+				from
+					$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+				where
+					parameter_name = 'RELATED_COMPANY'
+					and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS')
+				when APAA.COMPANY_CAUSALITY || '-' || coalesce(APAA.SPR_ID, '-9999') in (
+				select
+										value || '-' || coalesce(SPR_ID, '-9999') as related_causality
+									from (select * from 
+										(select *,row_number() over (partition by RECORD_ID order by DATE_MODIFIED desc) rank 
+											 FROM LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref
+											where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC)
+                                            --AND CDC_OPERATION_TYPE IN ('I','U') 
+										) where rank=1) lsmv_agx_appl_pref
+										,
+										lateral STRTOK_SPLIT_TO_TABLE(lsmv_agx_appl_pref.preference_value,
+										',')) then 'Related'
+				else 'Not related'
+			end)
+			else 
+        case
+				when (
+				select
+					trim(upper(default_value_char))
+				from
+					$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+				where
+					column_name = 'DER_COMBINED_RELATEDNESS'
+					and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS') = 'REPORTER' 
+          then  
+            ( case
+					when APAA.REPORTER_CAUSALITY is null then (
+					select
+						trim((default_value_char))
+					from
+						$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+					where
+						parameter_name = 'RELATED_REPORTER'
+						and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS')
+					when APAA.REPORTER_CAUSALITY || '-' || coalesce(APAA.SPR_ID, '-9999') in (
+					select
+										value || '-' || coalesce(SPR_ID, '-9999') as related_causality
+									from (select * from 
+										(select *,row_number() over (partition by RECORD_ID order by DATE_MODIFIED desc) rank 
+											FROM LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref
+											-- where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC)-- AND CDC_OPERATION_TYPE IN ('I','U') 
+										) where rank=1) lsmv_agx_appl_pref
+										 ,
+										lateral STRTOK_SPLIT_TO_TABLE(lsmv_agx_appl_pref.preference_value,
+										',')) then 'Related'
+					else 'Not related'
+				end )
+				else 
+          case
+					when (
+					select
+						trim(upper(default_value_char))
+					from
+						$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+					where
+						column_name = 'DER_COMBINED_RELATEDNESS'
+						and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS') in ( 'COMPANY OR REPORTER' , 'REPORTER OR COMPANY' )
+            then case
+						when ((
+						select
+							trim((default_value_char))
+						from
+							$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+						where
+							parameter_name = 'RELATED_REPORTER'
+							and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS') is not null
+						and (
+						select
+							trim((default_value_char))
+						from
+							$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+						where
+							parameter_name = 'RELATED_COMPANY'
+							and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS') is not null) then ( case
+							when APAA.REPORTER_CAUSALITY is null then ((
+							select
+								trim((default_value_char))
+							from
+								$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+							where
+								parameter_name = 'RELATED_REPORTER'
+								and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS'))
+							when APAA.COMPANY_CAUSALITY is null then ((
+							select
+								trim((default_value_char))
+							from
+								$$STG_DB_NAME.$$LSDB_RPL.ETL_COLUMN_PARAMETER
+							where
+								parameter_name = 'RELATED_COMPANY'
+								and table_name = 'LS_DB_DRUG_REACT_RELATEDNESS'))
+							when coalesce(APAA.REPORTER_CAUSALITY, APAA.COMPANY_CAUSALITY)|| '-' || coalesce(APAA.SPR_ID, '-9999') in (
+							select
+								value || '-' || coalesce(SPR_ID, '-9999') as related_causality
+							from
+								(select * from 
+										(select *,row_number() over (partition by RECORD_ID order by DATE_MODIFIED desc) rank 
+											FROM LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref
+											--where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC) -- AND CDC_OPERATION_TYPE IN ('I','U') 
+										) where rank=1) lsmv_agx_appl_pref ,
+								lateral STRTOK_SPLIT_TO_TABLE(lsmv_agx_appl_pref.preference_value,
+								','))
+								or coalesce(APAA.COMPANY_CAUSALITY, APAA.REPORTER_CAUSALITY)|| '-' || coalesce(APAA.SPR_ID, '-9999') in (
+								select
+									value || '-' || coalesce(SPR_ID, '-9999') as related_causality
+								from
+									(select * from 
+										(select *,row_number() over (partition by RECORD_ID order by DATE_MODIFIED desc) rank 
+											FROM LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref
+											where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC) --AND CDC_OPERATION_TYPE IN ('I','U') 
+										) where rank=1) lsmv_agx_appl_pref ,
+									lateral STRTOK_SPLIT_TO_TABLE(lsmv_agx_appl_pref.preference_value,
+									',')) then 'Related'
+								else 'Not related'
+							end)
+						else ( case
+							when APAA.REPORTER_CAUSALITY is null
+								and APAA.COMPANY_CAUSALITY is null then null
+								when coalesce(APAA.REPORTER_CAUSALITY, APAA.COMPANY_CAUSALITY)|| '-' || coalesce(APAA.SPR_ID, '-9999') in (
+								select
+									value || '-' || coalesce(SPR_ID, '-9999') as related_causality
+								from
+									LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref ,
+									lateral STRTOK_SPLIT_TO_TABLE(lsmv_agx_appl_pref.preference_value,
+									','))
+									or coalesce(APAA.COMPANY_CAUSALITY, APAA.REPORTER_CAUSALITY)|| '-' || coalesce(APAA.SPR_ID, '-9999') in 
+                  (
+									select
+										value || '-' || coalesce(SPR_ID, '-9999') as related_causality
+									from
+										(select * from 
+										(select *,row_number() over (partition by RECORD_ID order by DATE_MODIFIED desc) rank 
+											FROM LSMV_REPLICA_ALL_TBLS.lsmv_agx_appl_pref
+											-- where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC) --AND CDC_OPERATION_TYPE IN ('I','U') 
+										) where rank=1) lsmv_agx_appl_pref ,
+										lateral STRTOK_SPLIT_TO_TABLE(lsmv_agx_appl_pref.preference_value,
+										',')) then 'Related'
+									else 'Not related'
+								end)
+					end
+				end
+			end
+		end
+	end
+DER_COMBINED_RELATEDNESS
+from
+	LS_DB_DRUG_REACT_RELATEDNESS APAA
+where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC)
+and EXPIRY_DATE = TO_DATE('9999-31-12','YYYY-DD-MM')
+) LS_DB_DRUG_REACT_RELATEDNESS_TMP
+    WHERE LS_DB_DRUG_REACT_RELATEDNESS.ARI_REC_ID = LS_DB_DRUG_REACT_RELATEDNESS_TMP.ARI_REC_ID	
+	AND LS_DB_DRUG_REACT_RELATEDNESS.EXPIRY_DATE = TO_DATE('9999-31-12','YYYY-DD-MM');
+
+
+
+UPDATE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS   
+SET LS_DB_DRUG_REACT_RELATEDNESS.DERIVED_EXPECT_INTERNATIONAL=LS_DB_DRUG_REACT_RELATEDNESS_TMP.DERIVED_EXPECT_INTERNATIONAL
+FROM (
+SELECT
+		ARI_REC_ID,SEQ_REACT,LISTAGG( DERIVED_EXPECT_INTERNATIONAL,'\r\n')
+		within group (order by ARI_REC_ID,SEQ_REACT,AUTO_RANK) as DERIVED_EXPECT_INTERNATIONAL 
+FROM
+(		
+SELECT
+		ARI_REC_ID,SEQ_REACT,		
+		 DERIVED_EXPECT_INTERNATIONAL,AUTO_RANK
+		FROM
+		(
+			SELECT DISTINCT
+				ARI_REC_ID , SEQ_PRODUCT,SEQ_REACT ,
+				AUTO_RANK,
+				CASE WHEN T.DERIVED_EXPECT_INTERNATIONAL_DSUR IS NOT NULL THEN DERIVED_EXPECT_INTERNATIONAL_DSUR 
+				WHEN T.DERIVED_EXPECT_INTERNATIONAL_IB IS NOT NULL THEN DERIVED_EXPECT_INTERNATIONAL_IB
+				WHEN T.DERIVED_EXPECT_INTERNATIONAL_CORE IS NOT NULL THEN DERIVED_EXPECT_INTERNATIONAL_CORE
+				ELSE 'D'||T.Auto_Rank||': '||'-'
+				END AS DERIVED_EXPECT_INTERNATIONAL 
+			FROM
+			(
+			 SELECT ARI_REC_ID, SEQ_REACT, SEQ_PRODUCT,AUTO_RANK,
+			 MIN(DERIVED_EXPECT_INTERNATIONAL_DSUR) AS DERIVED_EXPECT_INTERNATIONAL_DSUR,
+			 MIN(DERIVED_EXPECT_INTERNATIONAL_IB) AS DERIVED_EXPECT_INTERNATIONAL_IB,
+			 MIN(DERIVED_EXPECT_INTERNATIONAL_CORE) AS DERIVED_EXPECT_INTERNATIONAL_CORE
+			 FROM
+			 (
+				select DRUG_REACT_LISTEDNESS_SUBSET.ARI_REC_ID,
+					DRUG_REACT_LISTEDNESS_SUBSET.SEQ_REACT, 
+					DRUG_REACT_LISTEDNESS_SUBSET.SEQ_PRODUCT,
+					DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE, 
+					DRUG_REACT_LISTEDNESS_SUBSET.LABELLED,
+					DRUG_SUBSET.AUTO_RANK,
+					CASE
+						when  DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE IN ('4') and DRUG_REACT_LISTEDNESS_SUBSET.LABELLED='1' then 'D'||DRUG_SUBSET.AUTO_RANK||': '||'Listed'
+						when DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE IN ('4') and DRUG_REACT_LISTEDNESS_SUBSET.LABELLED IN ('0','2') then 'D'||DRUG_SUBSET.AUTO_RANK||': '||'Unlisted'
+						end DERIVED_EXPECT_INTERNATIONAL_DSUR,
+					CASE
+						when  DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE IN ('2') and DRUG_REACT_LISTEDNESS_SUBSET.LABELLED='1' then 'D'||DRUG_SUBSET.AUTO_RANK||': '||'Listed'
+						when DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE IN ('2') and DRUG_REACT_LISTEDNESS_SUBSET.LABELLED IN ('0','2') then 'D'||DRUG_SUBSET.AUTO_RANK||': '||'Unlisted'
+						END DERIVED_EXPECT_INTERNATIONAL_IB,
+					CASE
+						when  DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE IN ('1') and DRUG_REACT_LISTEDNESS_SUBSET.LABELLED='1' then 'D'||DRUG_SUBSET.AUTO_RANK||': '||'Listed'
+						when DRUG_REACT_LISTEDNESS_SUBSET.COUNTRY_CODE IN ('1') and DRUG_REACT_LISTEDNESS_SUBSET.LABELLED IN ('0','2') then 'D'||DRUG_SUBSET.AUTO_RANK||': '||'Unlisted'
+						END DERIVED_EXPECT_INTERNATIONAL_CORE
+				FROM
+				(select    LS_DB_DRUG_REACT_LISTEDNESS.ari_rec_id  , 
+						fk_drug_rec_id As seq_product,
+						fk_ar_rec_id AS seq_react,
+						is_listed AS LABELLED,
+						country AS COUNTRY_CODE
+				FROM		
+				$$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_LISTEDNESS JOIN $$STG_DB_NAME.$$LSDB_RPL.LSMV_DRUG_REACT_RELATEDNESS 
+				ON LS_DB_DRUG_REACT_LISTEDNESS.fk_adrr_rec_id = LSMV_DRUG_REACT_RELATEDNESS.record_id
+				WHERE country in ('1','2','4')) DRUG_REACT_LISTEDNESS_SUBSET
+				LEFT JOIN 
+				(SELECT distinct ARI_REC_ID,record_id As seq_product,RANK_ORDER AS AUTO_RANK
+					FROM 
+					(select record_id,ARI_REC_ID,DRUGCHARACTERIZATION,RANK_ORDER,row_number() over (partition by RECORD_ID order by CDC_OPERATION_TIME desc) rank 
+								FROM $$STG_DB_NAME.$$LSDB_RPL.LSMV_DRUG  
+								where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC) AND CDC_OPERATION_TYPE IN ('I','U') 
+					) A where rank=1 and 
+					 DRUGCHARACTERIZATION IN ('1','3')
+				and ARI_REC_ID||'-'||record_id NOT IN 
+				(select UNBLINDED_REC from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_UNBLINDED)
+													  
+				) DRUG_SUBSET  ON 
+				 DRUG_REACT_LISTEDNESS_SUBSET.ARI_REC_ID=DRUG_SUBSET.ARI_REC_ID
+				AND DRUG_REACT_LISTEDNESS_SUBSET.SEQ_PRODUCT=DRUG_SUBSET.SEQ_PRODUCT
+				LEFT JOIN
+				(select record_id AS SEQ_REACT,ARI_REC_ID 
+						from (select record_id,ARI_REC_ID,row_number() over (partition by RECORD_ID order by CDC_OPERATION_TIME desc) rank 
+								FROM $$STG_DB_NAME.$$LSDB_RPL.LSMV_REACTION 
+								where ARI_REC_ID in (select  ARI_REC_ID from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS_CASE_QFC) AND CDC_OPERATION_TYPE IN ('I','U') 
+							) where rank=1 
+				) REACTION_SUBSET
+				ON  DRUG_REACT_LISTEDNESS_SUBSET.ARI_REC_ID=REACTION_SUBSET.ARI_REC_ID
+									AND DRUG_REACT_LISTEDNESS_SUBSET.SEQ_REACT=REACTION_SUBSET.SEQ_REACT
+			) Z GROUP BY ARI_REC_ID, SEQ_REACT, SEQ_PRODUCT,AUTO_RANK
+			) T ORDER BY ARI_REC_ID,AUTO_RANK
+		) A
+	WHERE DERIVED_EXPECT_INTERNATIONAL IS NOT NULL 
+	group by  ARI_REC_ID,SEQ_REACT,		
+		 DERIVED_EXPECT_INTERNATIONAL,AUTO_RANK
+) final_out
+group by ARI_REC_ID,SEQ_REACT) LS_DB_DRUG_REACT_RELATEDNESS_TMP
+    WHERE LS_DB_DRUG_REACT_RELATEDNESS.ARI_REC_ID = LS_DB_DRUG_REACT_RELATEDNESS_TMP.ARI_REC_ID	
+    AND  LS_DB_DRUG_REACT_RELATEDNESS.fk_ar_rec_id=LS_DB_DRUG_REACT_RELATEDNESS_TMP.SEQ_REACT
+	AND LS_DB_DRUG_REACT_RELATEDNESS.EXPIRY_DATE = TO_DATE('9999-31-12','YYYY-DD-MM');
+
+
+
+
+
+UPDATE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL
+SET LOAD_END_TS = current_timestamp,
+LOAD_TS=(select max(LOAD_TS) from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DRUG_REACT_RELATEDNESS),
+LOAD_STATUS='Completed'
+where target_table_name='LS_DB_DRUG_REACT_RELATEDNESS_DER'
+and LOAD_STATUS = 'In Progress'
+and LOAD_START_TS=(select max(LOAD_START_TS) from $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL where target_table_name='LS_DB_DRUG_REACT_RELATEDNESS_DER'
+and LOAD_STATUS = 'In Progress') ;	
+
+
+
+
+ RETURN 'LS_DB_DRUG_REACT_RELATEDNESS_DER Update completed';
+
+EXCEPTION
+  WHEN OTHER THEN
+    LET LINE := SQLCODE || ': ' || SQLERRM;
+UPDATE $$TGT_DB_NAME.$$LSDB_TRANSFM.LS_DB_DATA_PROCESSING_DTL_TBL set ERROR_DETAILS=:line,LOAD_STATUS = 'Error' WHERE target_table_name='LS_DB_DRUG_REACT_RELATEDNESS_DER'
+and LOAD_STATUS = 'In Progress'
+;
+
+
+
+END;
+$$
+;	
+
+/*
+
+ CREATE or replace TASK $$TGT_DB_NAME.$$LSDB_TRANSFM.TSK_LS_DB_DRUG_REACT_RELATEDNESS
+  WAREHOUSE = EXTRASMALL
+  Schedule = '15 minute'
+AS
+EXECUTE IMMEDIATE $$
+DECLARE
+    id int;
+BEGIN
+  CALL $$TGT_DB_NAME.$$LSDB_TRANSFM.PRC_LS_DB_DRUG_REACT_RELATEDNESS();
+  CALL $$TGT_DB_NAME.$$LSDB_TRANSFM.PRC_LS_DB_DRUG_REACT_RELATEDNESS_DER();
+END;
+$$
+;
+
+ALTER TASK $$TGT_DB_NAME.$$LSDB_TRANSFM.TSK_LS_DB_DRUG_REACT_RELATEDNESS RESUME; 
+
+*/

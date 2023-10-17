@@ -1,0 +1,19 @@
+aws_region      = "eu-west-1"
+product         = "databridge"
+product_version = "2023.2.0.0"
+customer_name   = "databridge"
+revenue_type    = "non-rev"
+requestor_name  = "Mahantesh Patil"
+jira_id         = "DF-1084"
+
+create_cluster              = true
+cluster_name                = "databridge-dataconsistency-check"
+cpu                         = 1024
+memory                      = 4096
+service_prefix              = "databridge-dataconsistency-check"
+service_name                = "databridge-dataconsistency-check"
+service_port_target_group   = 8501
+context_path                = "databridge-dataconsistency-check"
+healthcheck_path            = "/_stcore/health"
+log_group_retention_in_days = 7
+ecr_repository_name         = "databridge"
