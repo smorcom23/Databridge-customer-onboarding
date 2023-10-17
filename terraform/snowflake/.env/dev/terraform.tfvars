@@ -7,7 +7,7 @@ aws_region          = "eu-west-1"
 # Removing apps/tenants will destroy their Snowflake resources!
 #######################################
 app_tenant = [
-  "databridge_terratest1" #,
+  "databridge_terra1" #,
   #"databridge_terratest2"
 ]
 
@@ -23,14 +23,14 @@ user_map = {
     "default_role"      = "PUBLIC",
     "privilege"         = "ALL PRIVILEGES"
   },
-  #"ETL" = {
+  "ETL" = {
    # "first_name"        = "test",
     #"last_name"         = "user2",
     #"email"             = "test@test2.com",
     #"default_warehouse" = "COMPUTE_WH",
     #"default_role"      = "PUBLIC",
     #"privilege"         = "ALL PRIVILEGES"
-  #},
+  },
 }
 
 #######################################
