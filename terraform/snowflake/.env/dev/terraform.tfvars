@@ -24,12 +24,12 @@ user_map = {
     "privilege"         = "ALL PRIVILEGES"
   },
   "ETL" = {
-   # "first_name"        = "test",
-    #"last_name"         = "user2",
+    "first_name"        = "test",
+    "last_name"         = "user2",
     #"email"             = "test@test2.com",
-    #"default_warehouse" = "COMPUTE_WH",
-    #"default_role"      = "PUBLIC",
-    #"privilege"         = "ALL PRIVILEGES"
+    "default_warehouse" = "COMPUTE_WH",
+    "default_role"      = "PUBLIC",
+    "privilege"         = "ALL PRIVILEGES"
   },
 }
 
