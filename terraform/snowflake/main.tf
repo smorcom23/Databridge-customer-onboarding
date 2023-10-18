@@ -25,7 +25,7 @@ provider "aws" {
 # Create separate module to handle exception cases where standard template doesn't apply.
 #######################################
 module "snowflake" {
-  source = "git@github.com:smorcom23/Databridge-customer-onboarding.git/terraform/modules/snowflake_latest?ref=latest"
+  source = "git@github.com:smorcom23/Databridge-customer-onboarding//terraform/modules/snowflake_latest?ref=latest"
 #  source = "github.com/smorcom23/Databridge-customer-onboarding//terraform/modules/snowflake_latest?ref=latest"
 
   for_each = {
