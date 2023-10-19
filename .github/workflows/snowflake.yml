@@ -19,9 +19,10 @@ jobs:
       id-token: write  # need this for OIDC
       contents: read   # This is required for actions/checkout
     uses: ArisGlobal/SharedActions/.github/workflows/terraform-snowflake-latest.yml@latest
+    
     with:
       # need to specify working-directory as that's where the terraform files live in the source code
-      repo-token: ${{ secrets.NPM_TOKEN }}
+      token: ${{ secrets.NPM_TOKEN }}
       working-directory: ./terraform/snowflake
       runner-label: AGQC.TESTING
     secrets: inherit
