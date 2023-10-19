@@ -1,0 +1,26 @@
+name: "Terraform Snowflake provisioning workflow"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run the workflow against'
+        type: environment
+        required: true
+
+permissions:  # added using https://github.com/step-security/secure-workflows
+  contents: read
+
+jobs:
+  
+  terraform:
+
+    permissions:
+      id-token: write  # need this for OIDC
+      contents: read   # This is required for actions/checkout
+    uses: ArisGlobal/SharedActions/.github/workflows/terraform-snowflake-latest.yml@latest
+    with:
+      # need to specify working-directory as that's where the terraform files live in the source code
+      working-directory: ./terraform/snowflake
+      runner-label: AGQC.TESTING
+    secrets: inherit
