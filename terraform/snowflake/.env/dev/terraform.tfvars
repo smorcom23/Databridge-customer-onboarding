@@ -7,7 +7,7 @@ aws_region          = "eu-west-1"
 # Removing apps/tenants will destroy their Snowflake resources!
 #######################################
 app_tenant = [
-  "databridge_terra1" #,
+  "databridge_terra1" 
   #"databridge_terratest2"
 ]
 
