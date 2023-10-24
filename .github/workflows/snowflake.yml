@@ -1,28 +1,78 @@
-name: "Terraform Snowflake provisioning workflow"
+name: Terraform Snowflake Provisioning
 
 on:
   workflow_dispatch:
     inputs:
       environment:
         description: 'Environment to run the workflow against'
-        type: environment
         required: true
 
-permissions:  # added using https://github.com/step-security/secure-workflows
+permissions:
   contents: read
 
 jobs:
-  
   terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          repository: ArisGlobal/SharedActions
+          ref: latest
+          token: ${{ secrets.NPM_TOKEN }}
+          working-directory: ./terraform/snowflake
+          runner-label: AGQC.TESTING
+        env:
+          WORKFLOW_ENVIRONMENT: ${{ github.event.inputs.environment }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN : ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Install unzip
+        run: apt-get update && apt-get -y install awscli
+      - name: Assume AWS Role
+        run: |
+            aws sts assume-role --role-arn arn:aws:iam::972126847186:role/aws-reserved/sso.amazonaws.com/eu-west-1/AWSReservedSSO_CTOS_DBADMIN_L3_PERMISSIONSET_8c10a4cb20186a95 --role-session-name GitHubActions
+            # Configure AWS CLI with temporary credentials
+            echo $AWS_ACCESS_KEY_ID
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            aws configure set aws_session_token $AWS_SESSION_TOKEN
+        
+      - name: Display Environment Variable
+        run: |
+          echo "Using environment variable: $WORKFLOW_ENVIRONMENT"
 
-    permissions:
-      id-token: write  # need this for OIDC
-      contents: read   # This is required for actions/checkout
-    uses: ArisGlobal/SharedActions/.github/workflows/terraform-snowflake-latest.yml@latest
     
-    with:
-      # need to specify working-directory as that's where the terraform files live in the source code
-      token: ${{ secrets.NPM_TOKEN }}
-      working-directory: ./terraform/snowflake
-      runner-label: AGQC.TESTING
-    secrets: inherit
+      - name: Install unzip
+        run: apt-get update && apt-get -y install unzip
+
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        
+    
+      - name: Verify Terraform Version
+        run: terraform version
+
+      - name: Check out Databridgecode
+        uses: actions/checkout@v2
+        with:
+           repository: smorcom23/Databridge-customer-onboarding
+        
+        
+
+      - name: Configure Terraform Environment
+        working-directory: ./terraform/snowflake
+        env:
+            Bucket: ${{ secrets. Bucket }}
+            Key: $ {{ secrets.Key }}
+            SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+            SNOWFLAKE_REGION: ${{ secrets.SNOWFLAKE_REGION }}
+            SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+            SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        run: |
+             terraform  init -reconfigure
+      - name: Terraform apply
+        run: terraform apply
+        
+ 
